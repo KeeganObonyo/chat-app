@@ -1,32 +1,47 @@
 package main
 
 import (
-	"./data"
+	// "./data"
+	"encoding/json"
+	// "fmt"
 	"net/http"
 )
 
-// GET /err?msg=
-// shows the error message page
+const (
+	empty = ""
+	tab   = "\t"
+)
+
+var message1 string = "Internal functionality error"
+
 func err(writer http.ResponseWriter, request *http.Request) {
 	vals := request.URL.Query()
-	_, err := session(writer, request)
 	if err != nil {
-		generateHTML(writer, vals.Get("msg"), "layout", "public.navbar", "error")
+		writer.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(writer).Encode(vals)
 	} else {
-		generateHTML(writer, vals.Get("msg"), "layout", "private.navbar", "error")
+		writer.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(writer).Encode(vals)
 	}
 }
 
 func index(writer http.ResponseWriter, request *http.Request) {
-	threads, err := data.Threads()
-	if err != nil {
-		error_message(writer, request, "Cannot get threads")
-	} else {
-		_, err := session(writer, request)
-		if err != nil {
-			generateHTML(writer, threads, "layout", "public.navbar", "index")
-		} else {
-			generateHTML(writer, threads, "layout", "private.navbar", "index")
-		}
+	urls := map[int]string{
+		0: "Welcome",
+		1: "/logout",
+		2: "/signup",
+		3: "/authenticate",
+		4: "/thread/create",
+		5: "/thread/post",
+		6: "/thread/read",
 	}
+	{
+		writer.Header().Set("Content-Type", "application/json")
+
+		encoder := json.NewEncoder(writer)
+		encoder.SetIndent(empty, tab)
+		encoder.Encode(urls)
+
+	}
+
 }

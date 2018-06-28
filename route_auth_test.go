@@ -12,7 +12,7 @@ func Test_Get_Login(t *testing.T) {
 	mux.HandleFunc("/login", login)
 
 	writer := httptest.NewRecorder()
-	request, _ := http.NewRequest("GET", "/login", nil)
+	request, _ := http.NewRequest("GET", "/authenticate", nil)
 	mux.ServeHTTP(writer, request)
 
 	if writer.Code != 200 {

@@ -2,38 +2,60 @@ package main
 
 import (
 	"./data"
+	"encoding/json"
+	"io"
+	"io/ioutil"
 	"net/http"
 )
 
 // GET /login
 // Show the login page
-func login(writer http.ResponseWriter, request *http.Request) {
-	t := parseTemplateFiles("login.layout", "public.navbar", "login")
-	t.Execute(writer, nil)
-}
-
-// GET /signup
-// Show the signup page
-func signup(writer http.ResponseWriter, request *http.Request) {
-	generateHTML(writer, nil, "login.layout", "public.navbar", "signup")
-}
 
 // POST /signup
 // Create the user account
+type NewUser struct {
+	name     string
+	email    string
+	password string
+}
+
+func (f NewUser) Name() string {
+	return f.name
+}
+func (f NewUser) Email() string {
+	return f.email
+}
+func (f NewUser) Password() string {
+	return f.password
+}
 func signupAccount(writer http.ResponseWriter, request *http.Request) {
-	err := request.ParseForm()
+	newuser := NewUser{}
+	body, err := ioutil.ReadAll(io.LimitReader(request.Body, 1048576))
 	if err != nil {
-		danger(err, "Cannot parse form")
+		danger(err, "No data posted")
+	}
+	if err := request.Body.Close(); err != nil {
+		danger(err, "errors")
+	}
+	if err := json.Unmarshal(body, &newuser); err != nil {
+		writer.Header().Set("Content-Type", "application/json")
+		writer.WriteHeader(422) // unprocessable entity
+		if err := json.NewEncoder(writer).Encode(err); err != nil {
+			danger(err, "errors")
+		}
 	}
 	user := data.User{
-		Name:     request.PostFormValue("name"),
-		Email:    request.PostFormValue("email"),
-		Password: request.PostFormValue("password"),
+		Name:     newuser.Name(),
+		Email:    newuser.Email(),
+		Password: newuser.Password(),
 	}
-	if err := user.Create(); err != nil {
-		danger(err, "Cannot create user")
+	t := user.Create()
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusCreated)
+	if err := json.NewEncoder(writer).Encode(t); err != nil {
+		danger(err, "Couldn't create User")
 	}
-	http.Redirect(writer, request, "/login", 302)
+	http.Redirect(writer, request, "/authenticate", 302)
 }
 
 // POST /authenticate
@@ -57,7 +79,7 @@ func authenticate(writer http.ResponseWriter, request *http.Request) {
 		http.SetCookie(writer, &cookie)
 		http.Redirect(writer, request, "/", 302)
 	} else {
-		http.Redirect(writer, request, "/login", 302)
+		http.Redirect(writer, request, "/signup", 302)
 	}
 
 }
